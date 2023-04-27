@@ -2,9 +2,10 @@ library (spaceNtime)
 library(dplyr)
 library(data.table)
 library(amt)
+library(tidyverse)
 setwd("C:/Users/eliwi/OneDrive/Documents/R/TTE/TTE")
 
-
+browseVignettes("spaceNtime")
 #Need dataframe with capture history that has 3 columns: cam-unique ID for camera,
 #datetime  that has date and time of photo and count that has count of study species
 #although this only matters for IS not TTE (or STE)
@@ -22,12 +23,17 @@ df <- filter(df, !(count==1 & comments== "fawn"))
 #if camera went offline and came back on need multiple rows *check this
 deploy <- read.csv("C:/Users/eliwi/OneDrive/Documents/R/TTE/TTE/deployments.csv")
 deploy <- deploy[,c(2,6,7,10)]
-colnames(deploy) <- c("cam","start","end","featuretype")
+colnames(deploy) <- c("Camera","start","end","featuretype")
+DTimes <- read.csv("C:/Users/eliwi/OneDrive/Documents/R/TTE/TTE/DeploymentTimes.csv")
+DeployFeatures <- deploy[,c(1,4)]
+#entered BUSH4 as BUSH3 on Wildlife Insights , BUSH3 camera stolen
+DeployFeatures$Camera <- replace(x = DeployFeatures$Camera,list=10, values = "BUSH4")
+deploy2 <- left_join(DTimes, DeployFeatures, by="Camera")
 #need area covered by camera viewshed, 45m2 pulled from Loonam et al.2020 supplemental info
-deploy$area <- 45
-deploy$start<- as.POSIXct(deploy$start,format="%Y-%m-%d %H:%M:%S", tz="America/Denver")
-deploy$end<- as.POSIXct(deploy$end,format="%Y-%m-%d %H:%M:%S", tz="America/Denver")
-str(deploy)
+deploy2$area <- 45
+deploy2$Start<- as.POSIXct(deploy2$Start,format="%m/%d/%Y %H:%M:%S", tz="America/Denver")
+deploy2$End<- as.POSIXct(deploy2$End,format="%m/%d/%Y %H:%M:%S", tz="America/Denver")
+str(deploy2)
 
 #define sampling periods and sampling occasions
 #figure out movement rate (lps)
