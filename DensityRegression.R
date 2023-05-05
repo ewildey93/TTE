@@ -39,11 +39,12 @@ listnames <- CamLocs$Camera
 names(summaryValueslc100) <- listnames
 names(summaryValueslc250) <- listnames
 names(summaryValueslc400) <- listnames
-lclist <- list(summaryValueslc100,summaryValueslc250,summaryValueslc400)
+lclist <- list('LC100'=summaryValueslc100,'LC250'=summaryValueslc250,'LC400'=summaryValueslc400)
 
-for (i in 1: length(lclist)) {
-  lclist[i] <- lapply(lclist[i], function (x) as.data.frame(t(x)))
-}
+
+lclist <- lapply(lclist, function (x) lapply(x, function (x) as.data.frame(t(x))))
+lclist <- lapply(lclist, function (x) rbindlist(x, idcol = T))
+
 
 Plc100 <- rbindlist(summaryValueslc100)
 Plc250 <- rbindlist(summaryValueslc250)
