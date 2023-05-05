@@ -50,6 +50,7 @@ trkList <- lapply(Deer2, function (x) make_track(x, X, Y, DateTime, id = ID, crs
 stepList <- lapply(trkList, function (x) steps(x))
 steps <- rbindlist(stepList,idcol=TRUE)
 steps$dt <- as.numeric(steps$dt_)
+hist(steps$dt[steps$dt < 9000], breaks=100)
 hist(as.numeric(steps$dt_))
 steps[steps$dt < 15]
 hist(steps[steps$dt < 15]$sl_)
@@ -71,7 +72,7 @@ medianspeeds <- c(median(steps15$mvmtrate),median(steps30$mvmtrate),median(steps
 #sampling period
 per <- tte_samp_per(deploy2, lps = 1.76/60)
 #sampling occasion
-study_dates <- as.POSIXct(c("2022-04-15 00:00:00", "2022-08-15 23:59:59"), tz = "America/Denver")
+study_dates <- as.POSIXct(c("2022-04-15 00:00:00", "2022-05-15 23:59:59"), tz = "America/Denver")
 occ <- tte_build_occ(
   per_length = per,
   nper = 5,
