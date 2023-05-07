@@ -72,7 +72,7 @@ medianspeeds <- c(median(steps15$mvmtrate),median(steps30$mvmtrate),median(steps
 #sampling period
 per <- tte_samp_per(deploy2, lps = 1.76/60)
 #sampling occasion
-study_dates <- as.POSIXct(c("2022-04-15 00:00:00", "2022-05-15 23:59:59"), tz = "America/Denver")
+study_dates <- as.POSIXct(c("2022-04-15 00:00:00", "2022-08-15 23:59:59"), tz = "America/Denver")
 occ <- tte_build_occ(
   per_length = per,
   nper = 5,
@@ -93,11 +93,20 @@ tte_estN_fn(tte_eh, study_area = 5.504748e6)
 #for density by camera
 tte_ehlist <- split(tte_eh, f=tte_eh$cam)
 estNlist <- lapply(tte_ehlist, function (x) tryCatch(tte_estN_fn(x, study_area = 0.152909e6), error=function(e) NULL))
+estNlist2 <- lapply(tte_ehlist, function (x) tryCatch(tte_estN_fn(x, study_area = 5.504748e6), error=function(e) NULL))
+
 #tte_estN_fn(tte_eh[tte_eh$cam== "BUSH31",], study_area = 0.152909e6)
 estN <- rbindlist(estNlist, idcol = T)
 hist(estN$N)
+hist(1/estN$N)
 hist(log(estN$N))
 descdist(log(estN$N), discrete = FALSE)
+descdist(estN$N, discrete = FALSE)
+estN2 <- rbindlist(estNlist2, idcol = T)
+hist(estN2$N)
+hist(log(estN2$N))
+descdist(log(estN2$N), discrete = FALSE)
+descdist(estN2$N, discrete = FALSE)
 #STE
 study_dates <- as.POSIXct(c("2022-04-15 00:00:00", "2022-05-15 23:59:59"), tz = "America/Denver")
 occ <- build_occ(samp_freq = 3600, # seconds between the start of each sampling occasion
@@ -111,3 +120,13 @@ ste_estN_fn(ste_eh, study_area = 5.504748e6)
 
 ##################################scrap###################################################
 x <- tte_eh[tte_eh$cam == "ACORN2",]
+
+
+library(fitdistrplus)
+eh <- tte_eh[tte_eh$cam == "BUSH11",]
+eh <-eh$TTE[!is.na(eh$TTE)]
+descdist(eh, discrete = FALSE)
+hist(eh)
+fit.exp <- fitdist(eh, "exp")
+plot(fit.exp)
+

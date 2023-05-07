@@ -9,6 +9,9 @@ library(rgdal)
 library(easystats)
 library(nlme)
 library(lme4)
+library(corrplot)
+library(AICcmodavg)
+library(MuMIn)
 setwd("C:/Users/eliwi/OneDrive/Documents/R/TTE/TTE")
 
 
@@ -80,7 +83,7 @@ crs(herb)
 crs(CamLocsSF)
 CamLocs$distidx <- st_nearest_feature(CamLocsSF, herb)
 CamLocs$distherb <- st_distance(CamLocsSF, herb[CamLocs$distidx,], by_element = T)
-CamLocs2 <- CamLocs[,-c(4:11,13)]
+CamLocs2 <- CamLocs[,-c(4:11,12)]
 
 #get relative activity of humans
 camdf <- read.csv("C:/Users/eliwi/OneDrive/Documents/R/TTE/TTE/wildlifeinsights5.5/images.csv")
@@ -95,21 +98,35 @@ df <- df %>% group_by(cam, week)%>% mutate(HumanSum= sum(count))
 HumansatCam <- df%>%group_by(cam)%>%summarise(mean(HumanSum))
 colnames(HumansatCam)[1] <- "Camera"
 
+#slope
+Slope <- raster("./Slope.tif")
+projection(Slope)
+CamLocsSF<-st_transform(CamLocsSF, projection(Slope))
+CamLocs2$slope<-raster::extract(Slope, CamLocsSF)
+
+
 #join all dfs in prep for regression
 CamLocs2
 CamLocs2$Camera[7:15] <- c("BUSH1","BUSH2","BUSH3","BUSH4","BUSH5","BUSH6","BUSH7","BUSH8","BUSH9")
+
 CoVsList <- list(HumansatCam,CamLocs2,LineLengthGrid, LineLength150, ForestDF,ShrubDF)
 CoVs <- CoVsList%>% reduce(left_join, by="Camera")
 CoVs[CoVs$Camera == "BUSH3",]
 saveRDS(CoVs, "CoVs.rds")
-
+CoVs <- readRDS("./CoVs.rds")
 
 colnames(estN)[1] <- "Camera"
 RegDF <- left_join(CoVs, estN, by="Camera")
 colnames(RegDF)[2] <- "HumanAct"
 RegDF <- RegDF[!is.na(RegDF$N),]
 saveRDS(RegDF, "./RegDF.rds")
+RegDF <- readRDS("./RegDF.rds")
 #models
+CoVs <- RegDF[,c(2, 5:9,11:13,15,16)]
+corrplot(cor(CoVs),
+         method = "number",
+         type = "upper" # show only upper side
+)
 colnames(RegDF)
 m1 <- glm(N ~ scale(HumanAct) ,family=Gamma(link="identity"), data=RegDF)
 check_model(m1)
@@ -131,17 +148,40 @@ check_model(m6)
 summary(m6)
 m7 <- glm(N ~ scale(lc385.Forest) ,family=Gamma(link="identity"), data=RegDF)
 check_model(m7)
-summary(m2)
+summary(m7)
 m8 <- glm(N ~ scale(lc100.Shrub) ,family=Gamma(link="identity"), data=RegDF)
 check_model(m8)
 summary(m8)
-m9 <- glm(N ~ scale(lc250.Shrub) ,family=Gamma(link="identity"), data=RegDF)
+m9 <- glm(N ~ scale(lc250.Shrub) ,family=Gamma(link="inverse"), data=RegDF)
 check_model(m9)
 summary(m9)
 m10 <- glm(N ~ scale(lc385.Shrub) ,family=Gamma(link="identity"), data=RegDF)
 check_model(m10)
 summary(m10)
+m11 <- glm(N ~ scale(slope) ,family=Gamma(link="identity"), data=RegDF)
+check_model(m11)
+summary(m11)
+m12 <- glm(N ~ scale(LengthGrid) * scale(HumanAct) ,family=Gamma(link="identity"), data=RegDF)
+check_model(m12)
+summary(m12)
+m13 <- glm(N ~ scale(LengthGrid) + scale(HumanAct) + scale(distherb) ,family=Gamma(link="identity"), data=RegDF)
+check_model(m13)
+summary(m13)
+m14 <- glm(N ~ scale(LengthGrid) + scale(HumanAct) + scale(slope) ,family=Gamma(link="identity"), data=RegDF)
+check_model(m14)
+summary(m14)
+m15 <- glm(N ~ scale(HumanAct) + scale(slope) ,family=Gamma(link="identity"), data=RegDF)
+check_model(m15)
+summary(m15)
+m16 <- glm(N ~ scale(LengthGrid) + scale(slope) ,family=Gamma(link="identity"), data=RegDF)
+check_model(m16)
+summary(m16)
 
+#model selection
+TempList <- list(m1=m1,m3=m3,m12=m12,m13=m13,m14=m14,m15=m15,m16=m16)
+aictab(TempList)
+MAvg <- model.avg(m1, m3, m16)
+summary(MAvg)
 
 #functions
 summarizeLC <- function(x,LC_classes,LC_names = NULL){
