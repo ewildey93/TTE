@@ -43,7 +43,12 @@ lapply(FITSList, function (x) summary(x))
 
 SpeedList <- Map(function (x,y) ctmm::speed(object=x,CTMM=y),x=Telem ,y=FITSList)
 saveRDS(SpeedList, "./SpeedList.rds")
+SpeedList <- readRDS("./SpeedList.rds")
 lapply(SpeedList, function (x) summary(x))
 SpeedDF <- rbindlist(SpeedList, idcol=T)
+seq <- seq(from=5, to=26, by=3)
+SpeedDF <- SpeedDF[seq,]
+SpeedDF <- SpeedDF[-3,]
+mean(SpeedDF$CI)
 
 ctmm::speed(Telem[1], FITSList[1])

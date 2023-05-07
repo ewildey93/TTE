@@ -38,6 +38,7 @@ DeployFeatures <- deploy[,c(1,4)]
 DeployFeatures$Camera <- replace(x = DeployFeatures$Camera,list=10, values = "BUSH4")
 deploy2 <- left_join(DTimes, DeployFeatures, by="Camera")
 #need area covered by camera viewshed, 45m2 pulled from Loonam et al.2020 supplemental info
+Areas <- data.frame(area45=rnorm(45, mean=45, sd=5), area65=rnorm(45, mean=65, sd=5), area80=rnorm(45, mean=80, sd=5))
 deploy2$area <- 45
 deploy2$Start<- as.POSIXct(deploy2$Start,format="%m/%d/%Y %H:%M:%S", tz="America/Denver")
 deploy2$End<- as.POSIXct(deploy2$End,format="%m/%d/%Y %H:%M:%S", tz="America/Denver")
@@ -69,10 +70,16 @@ hist(steps30$mvmtrate)
 hist(steps60$mvmtrate)
 meanspeeds <- c(mean(steps15$mvmtrate),mean(steps30$mvmtrate),mean(steps60$mvmtrate), mean(steps130$mvmtrate),mean(steps$mvmtrate))
 medianspeeds <- c(median(steps15$mvmtrate),median(steps30$mvmtrate),median(steps60$mvmtrate), median(steps130$mvmtrate),median(steps$mvmtrate))
+
+#for loop for different speeds
 #sampling period
-per <- tte_samp_per(deploy2, lps = 1.76/60)
+speeds <- c(1.76/60, 207.91/3600)
+DiffSpeedsN <- data.frame(Camera=as.character, N=as.numeric(), SE=as.numeric(), LCI=as.numeric(), UCI=as.numeric())
+for (i in 1:length(speeds)) {
+deploy2$area <- 45
+per <- tte_samp_per(deploy2, lps = speeds[i])
 #sampling occasion
-study_dates <- as.POSIXct(c("2022-04-15 00:00:00", "2022-08-15 23:59:59"), tz = "America/Denver")
+study_dates <- as.POSIXct(c("2022-04-15 00:00:00", "2022-05-15 23:59:59"), tz = "America/Denver")
 occ <- tte_build_occ(
   per_length = per,
   nper = 5,
@@ -85,11 +92,44 @@ occ <- tte_build_occ(
 colnames(deploy2)[c(1:3)] <- c("cam", "start", "end")
 deploy2$cam <- as.factor(deploy2$cam)
 tte_eh <- tte_build_eh(df=df, deploy=deploy2, occ=occ,  samp_per=per)
-str(tte_eh)
+#str(tte_eh)
 #estimate abundance
 #study area size must be in the same units as camera area in sampling effort
 #each grid cell 152909.665m^2 *36 grid cells=5504748 or 
-tte_estN_fn(tte_eh, study_area = 5.504748e6)
+N <- tte_estN_fn(tte_eh, study_area = 5.504748e6)
+DiffSpeedsN <- rbind(DiffSpeedsN, N)
+DiffSpeedsN$speed <- speeds[i]
+}
+
+#for loop for different areas
+DiffAreaN <- data.frame(Camera=as.character, N=as.numeric(), SE=as.numeric(), LCI=as.numeric(), UCI=as.numeric())
+for (i in 1:length(colnames(Areas))) {
+  deploy2$area <- Areas[,i]
+  per <- tte_samp_per(deploy2, lps = 1.76/60)
+  #sampling occasion
+  study_dates <- as.POSIXct(c("2022-04-15 00:00:00", "2022-05-15 23:59:59"), tz = "America/Denver")
+  occ <- tte_build_occ(
+    per_length = per,
+    nper = 5,
+    time_btw = 2 * 3600,
+    study_start = study_dates[1],
+    study_end = study_dates[2]
+  )
+  
+  #build encounter history
+  colnames(deploy2)[c(1:3)] <- c("cam", "start", "end")
+  deploy2$cam <- as.factor(deploy2$cam)
+  tte_eh <- tte_build_eh(df=df, deploy=deploy2, occ=occ,  samp_per=per)
+  #str(tte_eh)
+  #estimate abundance
+  #study area size must be in the same units as camera area in sampling effort
+  #each grid cell 152909.665m^2 *36 grid cells=5504748 or 
+  N <- tte_estN_fn(tte_eh, study_area = 5.504748e6)
+  DiffAreaN <- rbind(DiffAreaN, N)
+  DiffAreaN$area <- mean(Areas[,i])
+}
+
+
 #for density by camera
 tte_ehlist <- split(tte_eh, f=tte_eh$cam)
 estNlist <- lapply(tte_ehlist, function (x) tryCatch(tte_estN_fn(x, study_area = 0.152909e6), error=function(e) NULL))
@@ -97,6 +137,7 @@ estNlist2 <- lapply(tte_ehlist, function (x) tryCatch(tte_estN_fn(x, study_area 
 
 #tte_estN_fn(tte_eh[tte_eh$cam== "BUSH31",], study_area = 0.152909e6)
 estN <- rbindlist(estNlist, idcol = T)
+saveRDS(estN, "./estNCam.rds")
 hist(estN$N)
 hist(1/estN$N)
 hist(log(estN$N))
