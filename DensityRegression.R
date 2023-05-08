@@ -20,6 +20,7 @@ Grid <- readOGR("C:/Users/eliwi/OneDrive/Documents/Salida/GeospatialLayers/Grid3
 CamLocs <- read.csv("./CamLocs.csv")
 str(CamLocs)
 CamLocs <- CamLocs[-c(38:41),]
+CamLocs[25, c(2,3)] <- c("38.498457","-105.986953")
 #Line Length- length of trails in grid cell
 LineLength <- read.csv("C:/Users/eliwi/OneDrive/Documents/R/TTE/TTE/LineLength.csv")
 LineLengthGrid <- LineLength[-5,]
@@ -83,6 +84,7 @@ crs(herb)
 crs(CamLocsSF)
 CamLocs$distidx <- st_nearest_feature(CamLocsSF, herb)
 CamLocs$distherb <- st_distance(CamLocsSF, herb[CamLocs$distidx,], by_element = T)
+CamLocs2$distherb <- CamLocs$distherb
 CamLocs2 <- CamLocs[,-c(4:11,12)]
 
 #get relative activity of humans
@@ -99,7 +101,7 @@ HumansatCam <- df%>%group_by(cam)%>%summarise(mean(HumanSum))
 colnames(HumansatCam)[1] <- "Camera"
 
 #slope
-Slope <- raster("./Slope.tif")
+Slope <- raster("./Slope2.tif")
 projection(Slope)
 CamLocsSF<-st_transform(CamLocsSF, projection(Slope))
 CamLocs2$slope<-raster::extract(Slope, CamLocsSF)
@@ -176,12 +178,24 @@ summary(m15)
 m16 <- glm(N ~ scale(LengthGrid) + scale(slope) ,family=Gamma(link="identity"), data=RegDF)
 check_model(m16)
 summary(m16)
-
+m17 <- glm(N ~ scale(lc250.Shrub) * scale(HumanAct) ,family=Gamma(link="identity"), data=RegDF)
+check_model(m17)
+summary(m17)
+m18 <- glm(N ~ scale(HumanAct) + scale(LengthGrid) ,family=Gamma(link="identity"), data=RegDF)
+check_model(m18)
+summary(m18)
 #model selection
-TempList <- list(m1=m1,m3=m3,m12=m12,m13=m13,m14=m14,m15=m15,m16=m16)
+TempList <- list(m1=m1,m3=m3,m12=m12,m13=m13,m14=m14,m15=m15,m16=m16,m17=m17,m18=m18)
 aictab(TempList)
 MAvg <- model.avg(m1, m3, m16)
 summary(MAvg)
+
+
+
+#graphs
+ggplot(RegDF, aes(x=LengthGrid, y=N)) + geom_point()
+ggplot(RegDF, aes(x=HumanAct, y=N)) + geom_point()
+ggplot(RegDF, aes(x=slope, y=N)) + geom_point()
 
 #functions
 summarizeLC <- function(x,LC_classes,LC_names = NULL){
