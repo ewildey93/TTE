@@ -20,7 +20,7 @@ df <- df[,c(2,16,17,22)]
 colnames(df) <- c("cam","datetime","count","comments")
 df$datetime <- as.POSIXct(df$datetime,format="%Y-%m-%d %H:%M:%S", tz="America/Denver")
 #fawns?
-df <- filter(df, !(count==1 & comments== "fawn"))
+df <- dplyr::filter(df, !(count==1 & comments== "fawn"))
 table(df$cam)
 #replace BUSH3 with BUSH4
 BUSH3 <- which(df$cam == "BUSH3")
@@ -40,12 +40,13 @@ DeployFeatures <- deploy[,c(1,4)]
 DeployFeatures$Camera <- replace(x = DeployFeatures$Camera,list=10, values = "BUSH4")
 deploy2 <- left_join(DTimes, DeployFeatures, by="Camera")
 c <- ((45/3)/360)*pi
-deploy2$area <- c*deploy2$L^2 + c*deploy2$C^2 + c*deploy2$R^2
+areaind <- c*deploy2$L^2 + c*deploy2$C^2 + c*deploy2$R^2
+#deploy2$area <- c*deploy2$L^2 + c*deploy2$C^2 + c*deploy2$R^2
 #need area covered by camera viewshed, 45m2 pulled from Loonam et al.2020 supplemental info
-Areas <- data.frame(area45=rnorm(45, mean=45, sd=5), area65=rnorm(45, mean=65, sd=5), area80=rnorm(45, mean=80, sd=5))
+Areas <- data.frame(area45=rnorm(46, mean=45, sd=5), area65=rnorm(46, mean=65, sd=5), area80=rnorm(46, mean=80, sd=5), areaind=areaind, area=45, area2=areaind+5)
 #or
 deploy2$area <- 45
-#or
+#or also included in Areas
 deploy2$area <- c*deploy2$L^2 + c*deploy2$C^2 + c*deploy2$R^2
 deploy2$Start<- as.POSIXct(deploy2$Start,format="%m/%d/%Y %H:%M:%S", tz="America/Denver")
 deploy2$End<- as.POSIXct(deploy2$End,format="%m/%d/%Y %H:%M:%S", tz="America/Denver")
@@ -145,8 +146,12 @@ DiffAreaN$DSE <- DiffAreaN$SE/5.504748
 DiffAreaN$DLCI <- DiffAreaN$LCI/5.504748
 DiffAreaN$DUCI <- DiffAreaN$UCI/5.504748
 saveRDS(DiffAreaN, "./DiffAreaN.rds")
-
+DiffAreaN <- readRDS("DiffAreaN.rds")
 #for density by camera
+deploy2$area <- 45
+deploy2$cam <- as.factor(deploy2$cam)
+df$cam <- as.factor(df$cam)
+per <- tte_samp_per(deploy2, lps = 1.76/60)
 study_dates2 <- as.POSIXct(c("2022-04-15 00:00:00", "2022-08-15 23:59:59"), tz = "America/Denver")
 occ2 <- tte_build_occ(
   per_length = per,

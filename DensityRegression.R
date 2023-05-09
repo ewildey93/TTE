@@ -12,6 +12,8 @@ library(lme4)
 library(corrplot)
 library(AICcmodavg)
 library(MuMIn)
+library(jtools)
+library(sjPlot)
 setwd("C:/Users/eliwi/OneDrive/Documents/R/TTE/TTE")
 
 
@@ -76,6 +78,7 @@ ForestDF$Camera[7:14] <- c("BUSH1","BUSH2","BUSH4","BUSH5","BUSH6","BUSH7","BUSH
 ShrubDF$Camera[7:14] <- c("BUSH1","BUSH2","BUSH4","BUSH5","BUSH6","BUSH7","BUSH8","BUSH9")
 colnames(ForestDF)[2:5] <- c("lc100.Forest","Forest", "lc250.Forest","lc385.Forest")
 colnames(ShrubDF)[2:5] <- c("lc100.Shrub","Shrub", "lc250.Shrub","lc385.Shrub")
+
 #convert herbaceous cover to polygon and get distance to values
 herb <- rasterToPolygons(lc2, function (x) x == 71, n=16, dissolve = T)
 writeOGR(herb, "./", "herbPoly.shp", driver="ESRI Shapefile")
@@ -84,7 +87,7 @@ crs(herb)
 crs(CamLocsSF)
 CamLocs$distidx <- st_nearest_feature(CamLocsSF, herb)
 CamLocs$distherb <- st_distance(CamLocsSF, herb[CamLocs$distidx,], by_element = T)
-CamLocs2$distherb <- CamLocs$distherb
+#CamLocs2$distherb <- CamLocs$distherb
 CamLocs2 <- CamLocs[,-c(4:11,12)]
 
 #get relative activity of humans
@@ -105,6 +108,7 @@ Slope <- raster("./Slope2.tif")
 projection(Slope)
 CamLocsSF<-st_transform(CamLocsSF, projection(Slope))
 CamLocs2$slope<-raster::extract(Slope, CamLocsSF)
+CamLocs2$slope100 <- raster::extract(Slope, CamLocsSF, buffer=100, fun=function(x) mean(x))
 
 
 #join all dfs in prep for regression
@@ -121,10 +125,11 @@ colnames(estN)[1] <- "Camera"
 RegDF <- left_join(CoVs, estN, by="Camera")
 colnames(RegDF)[2] <- "HumanAct"
 RegDF <- RegDF[!is.na(RegDF$N),]
+RegDF$CamType <- ifelse(grepl(pattern="ACORN", x=RegDF$Camera) == TRUE, "ACORN", "BUSH")
 saveRDS(RegDF, "./RegDF.rds")
 RegDF <- readRDS("./RegDF.rds")
 #models
-CoVs <- RegDF[,c(2, 5:9,11:13,15,16)]
+CoVs <- RegDF[,c(2, 5:10,12:14,16,17)]
 corrplot(cor(CoVs),
          method = "number",
          type = "upper" # show only upper side
@@ -178,19 +183,29 @@ summary(m15)
 m16 <- glm(N ~ scale(LengthGrid) + scale(slope) ,family=Gamma(link="identity"), data=RegDF)
 check_model(m16)
 summary(m16)
-m17 <- glm(N ~ scale(lc250.Shrub) * scale(HumanAct) ,family=Gamma(link="identity"), data=RegDF)
+m17 <- glm(N ~ scale(lc100.Shrub) + scale(HumanAct) ,family=Gamma(link="identity"), data=RegDF)
 check_model(m17)
 summary(m17)
 m18 <- glm(N ~ scale(HumanAct) + scale(LengthGrid) ,family=Gamma(link="identity"), data=RegDF)
 check_model(m18)
 summary(m18)
+m19 <- glm(N ~ scale(slope100) ,family=Gamma(link="identity"), data=RegDF)
+check_model(m19)
+summary(m19)
+m20 <- glmer(N ~ scale(LengthGrid) + (1|CamType),family=Gamma(link="identity"), data=RegDF)
+check_model(m20)
+summary(m20)
+
 #model selection
-TempList <- list(m1=m1,m3=m3,m12=m12,m13=m13,m14=m14,m15=m15,m16=m16,m17=m17,m18=m18)
+TempList <- list(m1=m1,m3=m3,m12=m12,m13=m13,m14=m14,m15=m15,m16=m16,m17=m17,m18=m18,m19=m19)
 aictab(TempList)
-MAvg <- model.avg(m1, m3, m16)
+List <- list(m3=m3,m20=m20)
+aictab(List)
+MAvg <- model.avg(m1, m3, m15, m18)
 summary(MAvg)
 
-
+tab_model(m1,m3,m15,m18)
+summary(MAvg)$coefmat.full
 
 #graphs
 ggplot(RegDF, aes(x=LengthGrid, y=N)) + geom_point()
