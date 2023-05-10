@@ -13,6 +13,7 @@ library(corrplot)
 library(AICcmodavg)
 library(MuMIn)
 library(jtools)
+library(modelsummary)
 library(sjPlot)
 setwd("C:/Users/eliwi/OneDrive/Documents/R/TTE/TTE")
 
@@ -192,21 +193,28 @@ summary(m18)
 m19 <- glm(N ~ scale(slope100) ,family=Gamma(link="identity"), data=RegDF)
 check_model(m19)
 summary(m19)
-m20 <- glmer(N ~ scale(LengthGrid) + (1|CamType),family=Gamma(link="identity"), data=RegDF)
-check_model(m20)
-summary(m20)
+##############################################################
+
 
 #model selection
 TempList <- list(m1=m1,m3=m3,m12=m12,m13=m13,m14=m14,m15=m15,m16=m16,m17=m17,m18=m18,m19=m19)
 aictab(TempList)
-List <- list(m3=m3,m20=m20)
+List <- list(m1=m1,m3=m3,m15=m15, m18=m18)
 aictab(List)
 MAvg <- model.avg(m1, m3, m15, m18)
 summary(MAvg)
+modavg(m1,m3,m15,m18)
 
 tab_model(m1,m3,m15,m18)
-summary(MAvg)$coefmat.full
+modelsummary(MAvg)
+models <- list("Human Activity"=m1, "Trail Density"=m3, "Human Activity + Slope"=m15, "Human Activity + Trail Density"=m18)
+modelsummary(models, gof_omit = "BIC|F|RMSE", stars=TRUE, statistic = 'conf.int', coef_rename = c("(Intercept)" = "Intercept", 
+                                                                                                  "scale(HumanAct)" = "Human Activity",
+                                                                                                  "scale(LengthGrid)" = "Trail Density",
+                                                                                                  "scale(slope)" = "Slope"))
 
+y
+file="ModelParamTab"
 #graphs
 ggplot(RegDF, aes(x=LengthGrid, y=N)) + geom_point()
 ggplot(RegDF, aes(x=HumanAct, y=N)) + geom_point()

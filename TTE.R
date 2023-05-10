@@ -5,7 +5,6 @@ library(amt)
 library(tidyverse)
 library(fitdistrplus)
 library(ggplot2)
-library(bquote)
 setwd("C:/Users/eliwi/OneDrive/Documents/R/TTE/TTE")
 
 browseVignettes("spaceNtime")
