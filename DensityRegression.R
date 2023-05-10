@@ -208,13 +208,38 @@ modavg(m1,m3,m15,m18)
 tab_model(m1,m3,m15,m18)
 modelsummary(MAvg)
 models <- list("Human Activity"=m1, "Trail Density"=m3, "Human Activity + Slope"=m15, "Human Activity + Trail Density"=m18)
-modelsummary(models, gof_omit = "BIC|F|RMSE", stars=TRUE, statistic = 'conf.int', coef_rename = c("(Intercept)" = "Intercept", 
-                                                                                                  "scale(HumanAct)" = "Human Activity",
-                                                                                                  "scale(LengthGrid)" = "Trail Density",
-                                                                                                  "scale(slope)" = "Slope"))
+modelsummary(models, 
+             gof_omit = "BIC|F|RMSE", 
+             stars=TRUE, statistic = 'conf.int', 
+             coef_rename = c("(Intercept)" = "Intercept", 
+                            "scale(HumanAct)" = "Human Activity",
+                            "scale(LengthGrid)" = "Trail Density",
+                            "scale(slope)" = "Slope"),
+                            output = "ModelsParamTab.png")
 
-y
-file="ModelParamTab"
+MAvgL <- list("Model Average"=MAvg)
+mef <- c(1.9259,-0.2412, -0.2128, -0.0619)
+SE <- c(0.2619, 0.3001, 0.1960, 0.1641)
+ti <- data.frame(
+  term = c("Intercept", "Trail Density", "Human Activity", "Slope"),
+  estimate = mef,
+  conf.low = c(mef + -1.96* SE),
+  conf.high = c(mef + -1.96* SE),
+  std.error= SE)
+
+gl <- data.frame(
+  stat1 = "blah",
+  stat2 = "blah blah")
+
+mod <- list(
+  tidy = ti)
+class(mod) <- "modelsummary_list"
+mods <- list("Full Model Average"=mod)
+
+
+modelsummary(mods, statistic="conf.int", output="MAvgParamsTab.png")
+
+
 #graphs
 ggplot(RegDF, aes(x=LengthGrid, y=N)) + geom_point()
 ggplot(RegDF, aes(x=HumanAct, y=N)) + geom_point()
