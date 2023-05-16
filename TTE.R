@@ -5,6 +5,7 @@ library(amt)
 library(tidyverse)
 library(fitdistrplus)
 library(ggplot2)
+library(remBoot)
 setwd("C:/Users/eliwi/OneDrive/Documents/R/TTE/TTE")
 
 browseVignettes("spaceNtime")
@@ -112,7 +113,8 @@ DiffSpeedsN$DSE <- DiffSpeedsN$SE/5.504748
 DiffSpeedsN$DLCI <- DiffSpeedsN$LCI/5.504748
 DiffSpeedsN$DUCI <- DiffSpeedsN$UCI/5.504748
 saveRDS(DiffSpeedsN, "./DiffSpeedsN.rds")
-
+DiffSpeedsN <- readRDS("./DiffSpeedsN.rds")
+anova(DiffSpeedsN$D)
 #for loop for different areas
 DiffAreaN <- data.frame(Camera=as.character, N=as.numeric(), SE=as.numeric(), LCI=as.numeric(), UCI=as.numeric())
 for (i in 1:length(colnames(Areas))) {
@@ -234,6 +236,19 @@ ggplot(DiffSpeedsN, aes(x=as.factor(speedround), y=D, color=group)) +
   theme(legend.position = "none")
 
 
+
+res_tte <- tte_pwr_sim(
+  N = c(26, 165),
+  study_area = c(5.504748e6),
+  ncam = 36,
+  nocc = 1273,
+  nper = 10,
+  cam_area = 45,
+  niter = 10
+)
+res_tte
+plot_pwr_sim(res_tte)
+plot_pwr_cv(res_tte)
 ##################################scrap###################################################
 x <- tte_eh[tte_eh$cam == "ACORN2",]
 
